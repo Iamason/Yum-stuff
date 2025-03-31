@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenRouter Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        #chat-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+
+        .bot-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #api-key-container {
+            margin-bottom: 10px;
+        }
+
+        #api-key, #model-selector {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="api-key-container">
+            <input type="password" id="api-key" placeholder="Enter your OpenRouter API key">
+        </div>
+        <select id="model-selector">
+            <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek V3 0324</option>
+            <option value="mistralai/mistral-small-3.1-24b-instruct:free">Mistral Small 3.1 24B</option>
+            <option value="google/gemma-3-1b-it:free">Gemma 3 1B</option>
+            <option value="featherless/qwerky-72b:free">Qwerky 72b</option>
+            <option value="moonshotai/moonlight-16b-a3b-instruct:free">Moonlight 16B A3B Instruct</option>
+            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B Instruct</option>
+        </select>
+        <div id="messages"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const apiKey = document.getElementById('api-key').value;
+            const model = document.getElementById('model-selector').value;
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            const messagesDiv = document.getElementById('messages');
+
+            if (!message) return;
+            if (!apiKey) {
+                alert('Please enter your API key');
+                return;
+            }
+
+            // Add user message
+            messagesDiv.innerHTML += `
+                <div class="message user-message">
+                    <strong>You:</strong><br>
+                    ${message}
+                </div>
+            `;
+            
+            userInput.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            try {
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'OpenRouter Chat Demo'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: 'user', content: message }],
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                const botMessage = data.choices?.[0]?.message?.content || "No response from AI.";
+
+                // Add bot message
+                messagesDiv.innerHTML += `
+                    <div class="message bot-message">
+                        <strong>AI:</strong><br>
+                        ${botMessage}
+                    </div>
+                `;
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            } catch (error) {
+                console.error('Error:', error);
+                messagesDiv.innerHTML += `
+                    <div class="message bot-message">
+                        <strong>AI:</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
